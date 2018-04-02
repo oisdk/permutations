@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f76df84461b90ab56105ab22dc824362623c2cfecda0fbf81f5699a93de90c8a
+-- hash: a71ea3d840efd0f296f5ab23578b8013155a5485841866f468daad58d9314d34
 
 name:           permutations
 version:        0.1.0.0
@@ -31,10 +31,13 @@ library
   ghc-options: -Wall -fwarn-incomplete-record-updates -fwarn-incomplete-uni-patterns
   build-depends:
       base >=4.7 && <5
+    , lens
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
   exposed-modules:
-      Lib
+      Data.List.Unfoldl
+      Data.Permutations.Indexed
+      Data.Tree.Accumulations
   other-modules:
       Paths_permutations
   default-language: Haskell2010
@@ -49,6 +52,7 @@ test-suite permutations-doctests
       QuickCheck
     , base >=4.7 && <5
     , doctest
+    , lens
     , permutations
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
@@ -64,6 +68,8 @@ test-suite permutations-test
   ghc-options: -Wall -fwarn-incomplete-record-updates -fwarn-incomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
+    , lens
     , permutations
     , smallcheck
     , tasty
@@ -83,6 +89,7 @@ benchmark bench
   build-depends:
       base >=4.7 && <5
     , criterion
+    , lens
     , permutations
     , random
   if impl(ghc >= 8.0)

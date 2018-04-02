@@ -1,20 +1,24 @@
 {-# LANGUAGE RankNTypes #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Main (main) where
 
-import           Test.QuickCheck                  hiding (vector)
+import           Test.QuickCheck                          hiding (vector)
 import           Test.Tasty
-import           Test.Tasty.QuickCheck            hiding (vector)
+import           Test.Tasty.QuickCheck                    hiding (vector)
 
 import           Control.Lens
-import qualified Data.Set                         as Set
+import qualified Data.Set                                 as Set
 import           Numeric.Natural
 
-import           Data.Permutations.Indexed        hiding (permutation)
+import           Data.Permutations.Indexed                hiding (permutation)
 import           Data.Permutations.Indexed.Vector
+import qualified Data.Permutations.Indexed.Vector.Unboxed as Unboxed
 
-import           Data.Vector                      (Vector)
+import           Data.Vector                              (Vector)
 import           Data.Vector.Lens
+import qualified Data.Vector.Unboxed                      as Unboxed
 
 instance Arbitrary Natural where
     arbitrary = fmap getNonNegative arbitrary
@@ -27,9 +31,6 @@ perms (Positive n) = map ((`permute` n) . toEnum) [0 .. product [1..n] - 1]
 isoIsId :: (Eq s, Show s) => Iso' s a -> s -> Property
 isoIsId l xs = (l %~ id) xs === xs
 
--- (=?=) :: (Show a, Eq a) => a -> a -> Either String String
--- (=?=) xs ys = bool Left Right (xs == ys) (show xs ++ " =?= " ++ show ys)
-
 prop_allLexPerms :: TestTree
 prop_allLexPerms = localOption (QuickCheckMaxSize 5) $
     testProperty
@@ -41,10 +42,18 @@ prop_allLexPerms = localOption (QuickCheckMaxSize 5) $
 
 prop_permIsId :: TestTree
 prop_permIsId =
-    testProperty
+    testGroup
         "Permutation isomorphism"
-        (\(NonNegative n) ->
-              isoIsId (vector . permutation n :: Iso' [Int] (Vector Int)))
+        [ testProperty
+              "Boxed"
+              (\n ->
+                    isoIsId (vector . permutation n :: Iso' [Int] (Vector Int)))
+        , testProperty
+              "Unboxed"
+              (\n ->
+                    isoIsId
+                        (iso Unboxed.fromList Unboxed.toList .
+                         Unboxed.permutation n :: Iso' [Int] (Unboxed.Vector Int)))]
 
 
 main :: IO ()

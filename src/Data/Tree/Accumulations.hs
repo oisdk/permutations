@@ -12,8 +12,9 @@ module Data.Tree.Accumulations
   where
 
 import           Data.Bits
-import Data.List.Uncons
+import           Data.List.Uncons
 import           Control.Monad.State
+import           Control.Applicative
 
 -- | A data type for efficiently performing selection without
 -- replacement.
@@ -52,17 +53,15 @@ spanTree l u
 buildTree :: [a] -> Tree a
 buildTree xs = evalState (replicateATree (length xs) uncons) xs
 
+-- | Build a tree by replicating some applicative action n times.
 replicateATree :: Applicative f => Int -> f a -> f (Tree a)
 replicateATree sz xs = go sz
   where
     go 0 = pure Leaf
-    go n = do
-        l <- go (n-m-1)
-        x <- xs
-        r <- go m
-        pure (Node x (n-m-1) l r)
+    go n = liftA3 (\l x r -> Node x ls l r) (go ls) xs (go rs)
       where
-        m = shiftR n 1
+        rs = shiftR n 1
+        ls = n-rs-1
 
 -- | Remove the nth item from the tree.
 pop :: Int -> Tree a -> (a, Tree a)
@@ -77,6 +76,8 @@ pop i (Node j s l r) =
             case pop (i - s - 1) r of
                 (i',r') -> (i', Node j s l r')
 
+-- | Convert a tree to a list according to
+-- some indices.
 fromIndList :: [Int] -> Tree a -> [a]
 fromIndList = evalState . traverse (state . pop)
 

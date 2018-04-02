@@ -79,6 +79,8 @@ permute n ln | prml > ln = permute (n - fact ln) ln
 permuteList :: Natural -> [a] -> [a]
 permuteList n xs = evalState (permuteA (length xs) n uncons) xs
 
+-- | Execute an applicative action n times, collecting the results in
+-- order of the mth permutation.
 permuteA :: Applicative f => Int -> Natural -> f a -> f [a]
 permuteA ln n x =
     liftA2

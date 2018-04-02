@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a71ea3d840efd0f296f5ab23578b8013155a5485841866f468daad58d9314d34
+-- hash: b6c775a0ede2f136ecb34d8042e0d717ca2ec3ffacb2abe7ea846e662a65f1ea
 
 name:           permutations
 version:        0.1.0.0
@@ -32,11 +32,13 @@ library
   build-depends:
       base >=4.7 && <5
     , lens
+    , vector
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
   exposed-modules:
       Data.List.Unfoldl
       Data.Permutations.Indexed
+      Data.Permutations.Indexed.Vector
       Data.Tree.Accumulations
   other-modules:
       Paths_permutations
@@ -54,6 +56,7 @@ test-suite permutations-doctests
     , doctest
     , lens
     , permutations
+    , vector
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
   other-modules:
@@ -67,13 +70,16 @@ test-suite permutations-test
       test
   ghc-options: -Wall -fwarn-incomplete-record-updates -fwarn-incomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , base >=4.7 && <5
     , containers
     , lens
     , permutations
     , smallcheck
     , tasty
+    , tasty-quickcheck
     , tasty-smallcheck
+    , vector
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
   other-modules:
@@ -92,6 +98,7 @@ benchmark bench
     , lens
     , permutations
     , random
+    , vector
   if impl(ghc >= 8.0)
     ghc-options: -fwarn-redundant-constraints -Wcompat
   other-modules:

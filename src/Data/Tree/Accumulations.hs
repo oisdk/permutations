@@ -23,6 +23,7 @@ spanTree l u
   where
     m = shiftR (l + u) 1
 
+-- | Remove the nth index from the tree.
 pop :: Tree -> Int -> (Tree, Int)
 pop Leaf i = (Leaf, i)
 pop (Node j s l r) i =
@@ -35,6 +36,7 @@ pop (Node j s l r) i =
             case pop r (i - s - 1) of
                 (r',i') -> (Node j s l r', i')
 
+-- | Merge two non-overlapping trees.
 merge :: Tree -> Tree -> Tree
 merge Leaf Leaf = Leaf
 merge l Leaf = l
@@ -43,6 +45,8 @@ merge (Node y ys yl yr) r = Node key s' l' r
   where
     (key,s',l') = maxView y ys yl yr
 
+-- | Takes an unpacked node constructor, returns the largest value
+-- as well as the rest of the tree and its size.
 maxView :: Int -> Int -> Tree -> Tree -> (Int, Int, Tree)
 maxView y s l Leaf = (y, s, l)
 maxView y s l (Node x xs xl xr) =

@@ -22,6 +22,7 @@ description:         Please see the README on Github at <https://github.com/oisd
 dependencies:
 - base >= 4.7 && < 5
 - lens
+- vector
 
 library:
   source-dirs: src
@@ -50,6 +51,8 @@ tests:
     - tasty
     - tasty-smallcheck
     - containers
+    - QuickCheck
+    - tasty-quickcheck
   permutations-doctests:
     main:                doctests.hs
     source-dirs:         doctest

@@ -1,43 +1,87 @@
-module Data.Tree.Accumulations where
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ApplicativeDo    #-}
+{-# LANGUAGE LambdaCase       #-}
 
-import Data.Bits
+module Data.Tree.Accumulations
+  (Tree
+  ,spanTree
+  ,pop
+  ,buildTree
+  ,replicateATree
+  ,fromIndList)
+  where
+
+import           Data.Bits
+import Data.List.Uncons
+import           Control.Monad.State
 
 -- | A data type for efficiently performing selection without
 -- replacement.
-data Tree
+data Tree a
     = Leaf
     | Node {
              -- | The index left at this position.
-             _index :: {-# UNPACK #-} !Int
+             _index  :: !a
            ,
              -- | The size of the left child.
-             _lsize :: {-# UNPACK #-} !Int
-           , _lchild :: !Tree
-           , _rchild :: !Tree}
+             _lsize  :: {-# UNPACK #-} !Int
+           , _lchild :: !(Tree a)
+           , _rchild :: !(Tree a)
+           } deriving (Show,Eq)
+
+instance Foldable Tree where
+    foldr f = go
+      where
+        go b Leaf = b
+        go b (Node x _ l r) = go (f x (go b r)) l
 
 -- | Construct a tree to span a given inclusive range.
-spanTree :: Int -> Int -> Tree
+--
+-- prop> toList (spanTree n m) === [n..m]
+spanTree :: Int -> Int -> Tree Int
 spanTree l u
   | l > u = Leaf
   | otherwise = Node m (m - l) (spanTree l (m - 1)) (spanTree (m + 1) u)
   where
     m = shiftR (l + u) 1
 
--- | Remove the nth index from the tree.
-pop :: Tree -> Int -> (Tree, Int)
-pop Leaf i = (Leaf, i)
-pop (Node j s l r) i =
+-- |
+--
+-- prop> toList (buildTree xs) === xs
+-- prop> buildTree [n..m] === spanTree n m
+buildTree :: [a] -> Tree a
+buildTree xs = evalState (replicateATree (length xs) uncons) xs
+
+replicateATree :: Applicative f => Int -> f a -> f (Tree a)
+replicateATree sz xs = go sz
+  where
+    go 0 = pure Leaf
+    go n = do
+        l <- go (n-m-1)
+        x <- xs
+        r <- go m
+        pure (Node x (n-m-1) l r)
+      where
+        m = shiftR n 1
+
+-- | Remove the nth item from the tree.
+pop :: Int -> Tree a -> (a, Tree a)
+pop _ Leaf = (undefined, Leaf)
+pop i (Node j s l r) =
     case compare i s of
         LT ->
-            case pop l i of
-                (l',i') -> (Node j (s - 1) l' r, i')
-        EQ -> (merge l r, j)
+            case pop i l of
+                (i',l') -> (i', Node j (s - 1) l' r)
+        EQ -> (j, merge l r)
         GT ->
-            case pop r (i - s - 1) of
-                (r',i') -> (Node j s l r', i')
+            case pop (i - s - 1) r of
+                (i',r') -> (i', Node j s l r')
+
+fromIndList :: [Int] -> Tree a -> [a]
+fromIndList = evalState . traverse (state . pop)
 
 -- | Merge two non-overlapping trees.
-merge :: Tree -> Tree -> Tree
+merge :: Tree a -> Tree a -> Tree a
 merge Leaf Leaf = Leaf
 merge l Leaf = l
 merge Leaf r = r
@@ -47,8 +91,12 @@ merge (Node y ys yl yr) r = Node key s' l' r
 
 -- | Takes an unpacked node constructor, returns the largest value
 -- as well as the rest of the tree and its size.
-maxView :: Int -> Int -> Tree -> Tree -> (Int, Int, Tree)
+maxView :: a -> Int -> Tree a -> Tree a -> (a, Int, Tree a)
 maxView y s l Leaf = (y, s, l)
 maxView y s l (Node x xs xl xr) =
     case maxView x xs xl xr of
         (ny,s',nr) -> (ny, s + s' + 1, Node y s l nr)
+
+-- $setup
+-- >>> import Test.QuickCheck
+-- >>> import Data.Foldable (toList)

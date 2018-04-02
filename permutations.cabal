@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f1c5445211bf7fb61d9f2d8c4819daec4e12d5394194bbb132909f06957d166a
+-- hash: 8fd5da25b7dfb3ecd07603a0e300e73e0fb22083a914511a8c66b93246f0cf39
 
 name:           permutations
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
       Data.Permutations.Indexed
       Data.Permutations.Indexed.Vector
       Data.Permutations.Indexed.Vector.Unboxed
+      Data.Permutations.Lexicographic
       Data.Tree.Accumulations
   other-modules:
       Paths_permutations

@@ -53,7 +53,11 @@ prop_permIsId =
               (\n ->
                     isoIsId
                         (iso Unboxed.fromList Unboxed.toList .
-                         Unboxed.permutation n :: Iso' [Int] (Unboxed.Vector Int)))]
+                         Unboxed.permutation n :: Iso' [Int] (Unboxed.Vector Int)))
+        , testProperty
+              "List"
+              (\n ->
+                    isoIsId (permuted n :: Iso' [Int] [Int]))]
 
 
 main :: IO ()

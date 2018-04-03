@@ -1,17 +1,20 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Data.Permutations.Indexed where
 
-import           Data.List.Unfoldl
 import           Data.List.Uncons
+import           Data.List.Unfoldl
 import           Data.Traversable
 import           Data.Tree.Accumulations
 
 import           Numeric.Natural
 
-import           Control.Monad.State
 import           Control.Applicative
-import           Data.Foldable (toList)
+import           Control.Monad.State
+import           Data.Foldable           (toList)
+
+import           Control.Lens            (Iso, iso)
 
 -- | Converts a number to its representation in the factorial number
 -- system.
@@ -117,7 +120,12 @@ permuteA ln n' x =
     n = wrapAround ln n'
 
 invPermuteA :: Applicative f => Int -> Natural -> f a -> f [a]
-invPermuteA ln n' x = liftA2 (\xs ys -> xs ++ toList ys) (replicateM (ln - fln) x) (fmap f (replicateM fln x))
+invPermuteA ln n' x =
+    liftA2
+        (\xs ys ->
+              xs ++ toList ys)
+        (replicateM (ln - fln) x)
+        (fmap f (replicateM fln x))
   where
     n = wrapAround ln n'
     fln = factLen n
@@ -130,3 +138,6 @@ invPermuteA ln n' x = liftA2 (\xs ys -> xs ++ toList ys) (replicateM (ln - fln) 
 --   arbitrary = fmap getNonNegative arbitrary
 --   shrink = map (fromIntegral . getNonNegative) . shrink . NonNegative . toInteger
 -- :}
+
+permuted :: Natural -> Iso [a] [b] [a] [b]
+permuted n = iso (permuteList n) (invPermuteList n)

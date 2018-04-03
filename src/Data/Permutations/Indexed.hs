@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.Permutations.Indexed
   (Permutation(..)
@@ -28,17 +28,66 @@ import           Numeric.Natural
 import           Data.Semigroup
 import           Data.Functor.Compose
 
+-- | This type represents the nth permutation of some sequence,
+-- lexicographically ordered.
+--
+-- For instance, the string @"abc"@ has 6 permutations:
+--
+-- @
+-- "abc"
+-- "acb"
+-- "bac"
+-- "bca"
+-- "cab"
+-- "cba"
+-- @
+--
+-- To produce any of the above permutations, we can run the
+-- permutation type on @"abc"@:
+--
+-- >>> permuteList 2 "abc"
+-- "bac"
+--
+-- Permutations can be composed, either with the monoid instance:
+--
+-- >>> Permutation 2 <> Permutation 5
+-- 3
+--
+-- Or with '+':
+--
+-- >>> Permutation 2 + Permutation 5
+-- 3
+--
+-- prop> (permuteList n . permuteList m) xs === permuteList (n <> m) xs
+--
+-- Permutations can also be inverted:
+--
+-- >>> (2 - 2) :: Permutation
+-- 0
+--
+-- >>> permuteList (2 - 2) "abc"
+-- "abc"
+--
+-- prop> (permuteList n . permuteList (negate n)) xs === xs
+-- prop> permuteList (n - n) xs === xs
+--
+-- Permutations are cyclic for some input sizes. For instance, although
+-- @"abc"@ only has 6 unique permutations, if we run the 7th:
+--
+-- It wraps around. To perform the "wrap-around" operation on the stored
+-- value, use the function 'wrapAround'.
+--
+-- >>> wrapAround 3 6
+-- 0
 newtype Permutation = Permutation
     { ind :: Natural
-    } deriving (Eq,Ord)
+    } deriving (Eq,Ord,Enum)
 
 instance Show Permutation where
     showsPrec n (Permutation x) = showsPrec n x
 
--- |
--- prop> (permuteList n . permuteList m) xs === permuteList (n <> m) xs
 instance Semigroup Permutation where
-    x <> y = fromFact (toFact x ++ toFact y)
+    x <> y = fromIndices (permuteList x (indices y))
 
 instance Monoid Permutation where
     mempty = Permutation 0
@@ -61,7 +110,7 @@ toFact (Permutation n') = unfoldl (uncurry go) (n', 1)
         case n `quotRem` m of
             (q,r) -> Just (fromEnum r, (q, m + 1))
 
--- |
+-- | Converts a permutation from a Lehmer code.
 --
 -- prop> (fromFact . toFact) n === n
 fromFact :: [Int] -> Permutation
@@ -103,7 +152,8 @@ indices n = evalState (traverse (state . pop) prms) (spanTree 0 (prml - 1))
     prms = toFact n
     prml = factLen n
 
--- |
+-- | Calculates which permutation a given sequence of indices is.
+--
 -- prop> (fromIndices . indices) n === n
 fromIndices :: [Int] -> Permutation
 fromIndices xs = fromFact (evalState (traverse (state . popElem) xs) tr)
@@ -111,6 +161,8 @@ fromIndices xs = fromFact (evalState (traverse (state . popElem) xs) tr)
     ln = length xs
     tr = spanTree 0 (ln-1)
 
+-- | Calculates the nth permutation for a sequence of
+-- a particular length.
 indicesLength :: Permutation -> Int -> [Int]
 indicesLength p' n =
     [0 .. d - 1] ++
@@ -136,13 +188,12 @@ inv = fromIndices . map fst . sortBy (comparing snd) . zip [0 ..] . indices
 permuteList :: Permutation -> [a] -> [a]
 permuteList n xs = evalState (permuteA (length xs) n uncons) xs
 
+-- | Truncate a permutation to its smaller equivalent
+-- on sequences of a specified length.
 wrapAround :: Int -> Permutation -> Permutation
-wrapAround ln = go . ind
-  where
-    go n
-      | factLen (Permutation n) > ln = go (n - fln)
-      | otherwise = Permutation n
-    fln = product [1 .. toEnum ln]
+wrapAround ln p
+  | factLen p > ln = Permutation (ind p `mod` product [1.. toEnum ln])
+  | otherwise = p
 
 -- | Invertly permute
 --

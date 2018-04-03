@@ -17,6 +17,7 @@ import           Control.Applicative
 import           Control.Monad.State
 import           Data.Bits
 import           Data.List.Uncons
+import           Data.Semigroup
 
 -- | A data type for efficiently performing selection without
 -- replacement.
@@ -229,14 +230,17 @@ popElem = go 0
         (i, r') -> (i, balanceL kx l r')
       EQ -> (idx + size l, glue l r)
 
+instance Semigroup (Tree a) where
+    Tip <> r   = r
+    l <> Tip   = l
+    l@(Bin sizeL x lx rx) <> r@(Bin sizeR y ly ry)
+      | delta*sizeL < sizeR = balanceL y (l <> ly) ry
+      | delta*sizeR < sizeL = balanceR x lx (rx <> r)
+      | otherwise           = glue l r
+
 instance Monoid (Tree a) where
     mempty = Tip
-    mappend Tip r   = r
-    mappend l Tip   = l
-    mappend l@(Bin sizeL x lx rx) r@(Bin sizeR y ly ry)
-      | delta*sizeL < sizeR = balanceL y (mappend l ly) ry
-      | delta*sizeR < sizeL = balanceR x lx (mappend rx r)
-      | otherwise           = glue l r
+    mappend = (<>)
 
 singleton :: a -> Tree a
 singleton x = Bin 1 x Tip Tip

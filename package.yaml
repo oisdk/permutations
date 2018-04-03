@@ -28,6 +28,11 @@ dependencies:
 
 library:
   source-dirs: src
+  exposed-modules:
+  - Data.Permutations.Indexed
+  - Data.Permutations.Lexicographic
+  - Data.Permutations.Indexed.Vector
+  - Data.Permutations.Indexed.Vector.Unboxed
 
 ghc-options:
 - -Wall

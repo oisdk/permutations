@@ -1,13 +1,23 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.Permutations.Indexed where
+module Data.Permutations.Indexed
+  (Permutation(..)
+  ,toFact
+  ,fromFact
+  ,factLen
+  ,indices
+  ,fromIndices
+  ,indicesLength
+  ,permuted
+  ,permuteTrav
+  ,permuteOf)
+  where
 
 import           Data.List.Uncons
 import           Data.List.Unfoldl
 import           Data.Traversable
 import           Data.Tree.Accumulations
-
 import           Control.Applicative
 import           Control.Lens            (Iso, iso)
 import           Control.Monad.State
@@ -16,6 +26,7 @@ import           Data.List               (sortBy)
 import           Data.Ord
 import           Numeric.Natural
 import           Data.Semigroup
+import           Data.Functor.Compose
 
 newtype Permutation = Permutation
     { ind :: Natural
@@ -111,7 +122,6 @@ indicesLength p' n =
     l = factLen p
     d = n - l
 
-
 -- |
 -- prop> (permuteList (inv n) . permuteList n) xs === xs
 inv :: Permutation -> Permutation
@@ -174,9 +184,27 @@ invPermuteA ln n' x =
     fln = factLen n
     f = toList . foldr (uncurry ins) (buildTree []) . zip (toFact n)
 
-
 permuted :: Permutation -> Iso [a] [b] [a] [b]
 permuted n = iso (permuteList n) (invPermuteList n)
+
+type Permuted x = Compose ((,) (Tree x)) (State [x])
+
+liftPermuted :: a -> Permuted a a
+liftPermuted x = Compose (singleton x, uncons)
+
+runPermuted :: Permutation -> Permuted x a -> a
+runPermuted n' (Compose (tr,xs)) = evalState xs (toList ts ++ ys)
+  where
+    n = wrapAround s n'
+    l = factLen n
+    s = size tr
+    (ys,ts) = runState (traverse (state . pop) (map ((s-l)+) (toFact n))) tr
+
+permuteTrav :: Traversable t => Permutation -> t a -> t a
+permuteTrav n = runPermuted n . traverse liftPermuted
+
+permuteOf :: ((a -> Permuted a a) -> s -> Permuted a t) -> Permutation -> s -> t
+permuteOf trav n = runPermuted n . trav liftPermuted
 
 -- $setup
 -- >>> import Test.QuickCheck

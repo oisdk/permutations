@@ -1,5 +1,4 @@
-{-# LANGUAGE BangPatterns               #-}
-
+{-# LANGUAGE BangPatterns  #-}
 
 module Data.Tree.Accumulations
   (Tree
@@ -9,7 +8,9 @@ module Data.Tree.Accumulations
   ,buildTree
   ,replicateATree
   ,fromIndList
-  ,popElem)
+  ,popElem
+  ,singleton
+  ,size)
   where
 
 import           Control.Applicative
@@ -227,3 +228,15 @@ popElem = go 0
       GT -> case go (idx + size l + 1) x r of
         (i, r') -> (i, balanceL kx l r')
       EQ -> (idx + size l, glue l r)
+
+instance Monoid (Tree a) where
+    mempty = Tip
+    mappend Tip r   = r
+    mappend l Tip   = l
+    mappend l@(Bin sizeL x lx rx) r@(Bin sizeR y ly ry)
+      | delta*sizeL < sizeR = balanceL y (mappend l ly) ry
+      | delta*sizeR < sizeL = balanceR x lx (mappend rx r)
+      | otherwise           = glue l r
+
+singleton :: a -> Tree a
+singleton x = Bin 1 x Tip Tip

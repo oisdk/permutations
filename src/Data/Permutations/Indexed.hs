@@ -123,13 +123,13 @@ invPermuteA :: Applicative f => Int -> Natural -> f a -> f [a]
 invPermuteA ln n' x =
     liftA2
         (\xs ys ->
-              xs ++ toList ys)
+              xs ++ f ys)
         (replicateM (ln - fln) x)
-        (fmap f (replicateM fln x))
+        (replicateM fln x)
   where
     n = wrapAround ln n'
     fln = factLen n
-    f xs = foldr (uncurry ins) (buildTree []) (zip (toFact n) xs)
+    f = toList . foldr (uncurry ins) (buildTree []) . zip (toFact n)
 
 -- $setup
 -- >>> import Test.QuickCheck

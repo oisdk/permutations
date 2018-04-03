@@ -24,6 +24,7 @@ dependencies:
 - lens
 - vector
 - mtl
+- containers
 
 library:
   source-dirs: src

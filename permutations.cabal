@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cc2babd7e8e1ff92282e8d2e467b1513e0513aae501e28fe8d6c0652505e6c9e
+-- hash: 718a719fd0f367dc17e7390ebafe88756191eebc7da155b7bf8f00af8cbadbfa
 
 name:           permutations
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
   ghc-options: -Wall -fwarn-incomplete-record-updates -fwarn-incomplete-uni-patterns
   build-depends:
       base >=4.7 && <5
+    , containers
     , lens
     , mtl
     , vector
@@ -57,6 +58,7 @@ test-suite permutations-doctests
   build-depends:
       QuickCheck
     , base >=4.7 && <5
+    , containers
     , doctest
     , lens
     , mtl
@@ -100,6 +102,7 @@ benchmark bench
   ghc-options: -Wall -fwarn-incomplete-record-updates -fwarn-incomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
+    , containers
     , criterion
     , lens
     , mtl

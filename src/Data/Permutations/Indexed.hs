@@ -11,6 +11,7 @@ import           Numeric.Natural
 
 import           Control.Monad.State
 import           Control.Applicative
+import           Data.Foldable (toList)
 
 -- | Converts a number to its representation in the factorial number
 -- system.
@@ -79,10 +80,33 @@ permute n ln | prml > ln = permute (n - fact ln) ln
 permuteList :: Natural -> [a] -> [a]
 permuteList n xs = evalState (permuteA (length xs) n uncons) xs
 
+wrapAround :: Int -> Natural -> Natural
+wrapAround ln = go
+  where
+    go n
+      | factLen n > ln = go (n - fln)
+      | otherwise = n
+    fln = product [1 .. toEnum ln]
+
+-- | Invertly permute
+--
+-- prop> (invPermuteList n . permuteList n) xs == (xs :: String)
+--
+-- >>> (invPermuteList 3 . permuteList 3) "abc"
+-- "abc"
+-- >>> (invPermuteList 1 . permuteList 1) "abc"
+-- "abc"
+-- >>> (invPermuteList 2 . permuteList 2) "abc"
+-- "abc"
+-- >>> (invPermuteList 4 . permuteList 4) "abc"
+-- "abc"
+invPermuteList :: Natural -> [a] -> [a]
+invPermuteList n xs = evalState (invPermuteA (length xs) n uncons) xs
+
 -- | Execute an applicative action n times, collecting the results in
 -- order of the mth permutation.
 permuteA :: Applicative f => Int -> Natural -> f a -> f [a]
-permuteA ln n x =
+permuteA ln n' x =
     liftA2
         (\xs ys ->
               xs ++ fromIndList (toFact n) ys)
@@ -90,7 +114,14 @@ permuteA ln n x =
         (replicateATree fln x)
   where
     fln = factLen n
+    n = wrapAround ln n'
 
+invPermuteA :: Applicative f => Int -> Natural -> f a -> f [a]
+invPermuteA ln n' x = liftA2 (\xs ys -> xs ++ toList ys) (replicateM (ln - fln) x) (fmap f (replicateM fln x))
+  where
+    n = wrapAround ln n'
+    fln = factLen n
+    f xs = foldr (uncurry ins) (buildTree []) (zip (toFact n) xs)
 
 -- $setup
 -- >>> import Test.QuickCheck

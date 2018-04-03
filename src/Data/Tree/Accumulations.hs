@@ -5,6 +5,7 @@ module Data.Tree.Accumulations
   (Tree
   ,spanTree
   ,pop
+  ,ins
   ,buildTree
   ,replicateATree
   ,fromIndList)
@@ -16,7 +17,7 @@ import           Data.Bits
 import           Data.List.Uncons
 
 import           Data.Set.Internal   (Set (..), fromDistinctAscList, link,
-                                      merge, size)
+                                      merge, size, singleton)
 
 -- | A data type for efficiently performing selection without
 -- replacement.
@@ -38,6 +39,17 @@ pop !i (Tree t) =
                         (y,Tree r') -> (y, Tree (link x l r'))
                 EQ -> (x, Tree (merge l r))
             where sizeL = size l
+
+ins :: Int -> a -> Tree a -> Tree a
+ins !_ x (Tree Tip) = Tree (singleton x)
+ins !i x (Tree (Bin _ y l r)) = case compare i sizeL of
+  LT -> case ins i x (Tree l) of
+    Tree l' -> Tree (link y l' r)
+  GT -> case ins (i-sizeL-1) x (Tree r) of
+    Tree r' -> Tree (link y l r')
+  EQ -> Tree (link x l (link y Tip r))
+ where
+   sizeL = size l
 -- |
 --
 -- prop> toList (buildTree xs) === xs

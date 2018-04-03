@@ -8,27 +8,25 @@ import           Test.QuickCheck                          hiding (vector)
 import           Test.Tasty
 import           Test.Tasty.QuickCheck                    hiding (vector)
 
-import           Control.Lens
+import           Control.Lens                             hiding (indices)
 import qualified Data.Set                                 as Set
 import           Numeric.Natural
 
-import           Data.Permutations.Indexed                hiding (permutation)
-import           Data.Permutations.Indexed.Vector
+import           Data.Permutations.Indexed
+import qualified Data.Permutations.Indexed.Vector         as Vector
 import qualified Data.Permutations.Indexed.Vector.Unboxed as Unboxed
 
 import           Data.Vector                              (Vector)
 import           Data.Vector.Lens
 import qualified Data.Vector.Unboxed                      as Unboxed
 
-instance Arbitrary Natural where
-    arbitrary = fmap getNonNegative arbitrary
-    shrink = map getNonNegative . shrink . NonNegative
-
-
 perms :: Positive Int -> [[Int]]
-perms (Positive n) = map ((`permute` n) . toEnum) [0 .. product [1..n] - 1]
+perms (Positive n) =
+    map (flip indicesLength (fromEnum n) . Permutation . toEnum) [0 .. product [1 .. n] - 1]
 
-isoIsId :: (Eq s, Show s) => Iso' s a -> s -> Property
+isoIsId
+    :: (Eq s, Show s)
+    => Iso' s a -> s -> Property
 isoIsId l xs = (l %~ id) xs === xs
 
 prop_allLexPerms :: TestTree
@@ -47,18 +45,26 @@ prop_permIsId =
         [ testProperty
               "Boxed"
               (\n ->
-                    isoIsId (vector . permutation n :: Iso' [Int] (Vector Int)))
+                    isoIsId (vector . Vector.permuted n :: Iso' [Int] (Vector Int)))
         , testProperty
               "Unboxed"
               (\n ->
                     isoIsId
                         (iso Unboxed.fromList Unboxed.toList .
-                         Unboxed.permutation n :: Iso' [Int] (Unboxed.Vector Int)))
+                         Unboxed.permuted n :: Iso' [Int] (Unboxed.Vector Int)))
         , testProperty
               "List"
               (\n ->
                     isoIsId (permuted n :: Iso' [Int] [Int]))]
 
+instance Arbitrary Natural where
+    arbitrary = fmap getNonNegative arbitrary
+    shrink =
+        map (fromIntegral . getNonNegative) . shrink . NonNegative . toInteger
+
+instance Arbitrary Permutation where
+    arbitrary = fmap Permutation arbitrary
+    shrink = map Permutation . shrink . ind
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" [prop_allLexPerms, prop_permIsId])

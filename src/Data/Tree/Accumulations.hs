@@ -8,7 +8,8 @@ module Data.Tree.Accumulations
   ,ins
   ,buildTree
   ,replicateATree
-  ,fromIndList)
+  ,fromIndList
+  ,popElem)
   where
 
 import           Control.Applicative
@@ -214,3 +215,15 @@ ratio :: Int
 ratio = 2
 delta :: Int
 delta = 3
+
+popElem :: Ord a => a -> Tree a -> (Int, Tree a)
+popElem = go 0
+  where
+    go :: Ord a => Int -> a -> Tree a -> (Int, Tree a)
+    go !_ !_ Tip  = errorWithoutStackTrace "popElem: index out of bounds"
+    go idx x (Bin _ kx l r) = case compare x kx of
+      LT -> case go idx x l of
+        (i, l') -> (i, balanceR kx l' r)
+      GT -> case go (idx + size l + 1) x r of
+        (i, r') -> (i, balanceL kx l r')
+      EQ -> (idx + size l, glue l r)

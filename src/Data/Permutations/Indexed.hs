@@ -8,28 +8,61 @@ import           Data.List.Unfoldl
 import           Data.Traversable
 import           Data.Tree.Accumulations
 
-import           Numeric.Natural
-
 import           Control.Applicative
+import           Control.Lens            (Iso, iso)
 import           Control.Monad.State
 import           Data.Foldable           (toList)
+import           Data.List               (sortBy)
+import           Data.Ord
+import           Numeric.Natural
+import           Data.Semigroup
 
-import           Control.Lens            (Iso, iso)
+newtype Permutation = Permutation
+    { ind :: Natural
+    } deriving (Eq,Ord)
 
--- | Converts a number to its representation in the factorial number
--- system.
-toFact :: Natural -> [Int]
-toFact n' = unfoldl (uncurry go) (n', 1)
+instance Show Permutation where
+    showsPrec n (Permutation x) = showsPrec n x
+
+-- |
+-- prop> (permuteList n . permuteList m) xs === permuteList (n <> m) xs
+instance Semigroup Permutation where
+    x <> y = fromFact (toFact x ++ toFact y)
+
+instance Monoid Permutation where
+    mempty = Permutation 0
+    mappend = (<>)
+
+instance Num Permutation where
+    fromInteger = Permutation . fromInteger
+    (+) = (<>)
+    negate = inv
+    (*) = error "Multiplication not defined for permutations"
+    abs = error "abs not defined for permutations"
+    signum = error "signum not defined for permutations"
+
+-- | Converts a permutation to its Lehmer code.
+toFact :: Permutation -> [Int]
+toFact (Permutation n') = unfoldl (uncurry go) (n', 1)
   where
     go 0 _ = Nothing
     go n m =
         case n `quotRem` m of
             (q,r) -> Just (fromEnum r, (q, m + 1))
 
+-- |
+--
+-- prop> (fromFact . toFact) n === n
+fromFact :: [Int] -> Permutation
+fromFact xs = Permutation (foldl f b xs 1)
+  where
+    b _ = 0
+    f a e n = toEnum e + n * a (n+1)
+
 -- | Calculates the length of the factorial representation of a number.
 --
 -- prop> factLen n === length (toFact n)
-factLen :: Natural -> Int
+factLen :: Permutation -> Int
 factLen =
     length .
     takeWhile (> 0) .
@@ -43,36 +76,46 @@ factLen =
                   1
                   [1 ..]))
   where
-    safeSub n m
-        | n >= m = n - m
+    safeSub (Permutation n) m
+        | n >= m = Permutation (n - m)
         | otherwise = 0
 
 -- | Calculate the nth permutation.
 --
--- >>> permutation 0
+-- >>> indices 0
 -- []
--- >>> permutation 1
+-- >>> indices 1
 -- [1,0]
-permutation :: Natural -> [Int]
-permutation n = evalState (traverse (state . pop) prms) (spanTree 0 (prml - 1))
+indices :: Permutation -> [Int]
+indices n = evalState (traverse (state . pop) prms) (spanTree 0 (prml - 1))
   where
     prms = toFact n
     prml = factLen n
 
--- | @'permute' n m@ calculates the @n@th permutation of length @m@.
---
--- >>> permute 0 5
--- [0,1,2,3,4]
---
--- >>> permute 3 5
--- [0,1,3,4,2]
-permute :: Natural -> Int -> [Int]
-permute _ 0 = []
-permute n ln | prml > ln = permute (n - fact ln) ln
-             | otherwise = [0 .. (ln - prml) - 1] ++ map ((ln - prml) +) (permutation n)
+-- |
+-- prop> (fromIndices . indices) n === n
+fromIndices :: [Int] -> Permutation
+fromIndices xs = fromFact (evalState (traverse (state . popElem) xs) tr)
   where
-    prml = factLen n
-    fact m = product [1 .. toEnum m]
+    ln = length xs
+    tr = spanTree 0 (ln-1)
+
+indicesLength :: Permutation -> Int -> [Int]
+indicesLength p' n =
+    [0 .. d - 1] ++
+    evalState
+        (traverse (state . pop) (toFact p))
+        (spanTree d (d + l - 1))
+  where
+    p = wrapAround n p'
+    l = factLen p
+    d = n - l
+
+
+-- |
+-- prop> (permuteList (inv n) . permuteList n) xs === xs
+inv :: Permutation -> Permutation
+inv = fromIndices . map fst . sortBy (comparing snd) . zip [0 ..] . indices
 
 -- | Return the nth permutation of a list.
 --
@@ -80,15 +123,15 @@ permute n ln | prml > ln = permute (n - fact ln) ln
 -- "abc"
 -- >>> permuteList 1 "abc"
 -- "acb"
-permuteList :: Natural -> [a] -> [a]
+permuteList :: Permutation -> [a] -> [a]
 permuteList n xs = evalState (permuteA (length xs) n uncons) xs
 
-wrapAround :: Int -> Natural -> Natural
-wrapAround ln = go
+wrapAround :: Int -> Permutation -> Permutation
+wrapAround ln = go . ind
   where
     go n
-      | factLen n > ln = go (n - fln)
-      | otherwise = n
+      | factLen (Permutation n) > ln = go (n - fln)
+      | otherwise = Permutation n
     fln = product [1 .. toEnum ln]
 
 -- | Invertly permute
@@ -103,12 +146,12 @@ wrapAround ln = go
 -- "abc"
 -- >>> (invPermuteList 4 . permuteList 4) "abc"
 -- "abc"
-invPermuteList :: Natural -> [a] -> [a]
+invPermuteList :: Permutation -> [a] -> [a]
 invPermuteList n xs = evalState (invPermuteA (length xs) n uncons) xs
 
 -- | Execute an applicative action n times, collecting the results in
 -- order of the mth permutation.
-permuteA :: Applicative f => Int -> Natural -> f a -> f [a]
+permuteA :: Applicative f => Int -> Permutation -> f a -> f [a]
 permuteA ln n' x =
     liftA2
         (\xs ys ->
@@ -119,7 +162,7 @@ permuteA ln n' x =
     fln = factLen n
     n = wrapAround ln n'
 
-invPermuteA :: Applicative f => Int -> Natural -> f a -> f [a]
+invPermuteA :: Applicative f => Int -> Permutation -> f a -> f [a]
 invPermuteA ln n' x =
     liftA2
         (\xs ys ->
@@ -131,13 +174,17 @@ invPermuteA ln n' x =
     fln = factLen n
     f = toList . foldr (uncurry ins) (buildTree []) . zip (toFact n)
 
+
+permuted :: Permutation -> Iso [a] [b] [a] [b]
+permuted n = iso (permuteList n) (invPermuteList n)
+
 -- $setup
 -- >>> import Test.QuickCheck
 -- >>> :{
 -- instance Arbitrary Natural where
 --   arbitrary = fmap getNonNegative arbitrary
 --   shrink = map (fromIntegral . getNonNegative) . shrink . NonNegative . toInteger
+-- instance Arbitrary Permutation where
+--   arbitrary = fmap Permutation arbitrary
+--   shrink = map Permutation . shrink . ind
 -- :}
-
-permuted :: Natural -> Iso [a] [b] [a] [b]
-permuted n = iso (permuteList n) (invPermuteList n)

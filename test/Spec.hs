@@ -58,7 +58,7 @@ prop_permIsId =
                     isoIsId (permuted n :: Iso' [Int] [Int]))]
 
 instance Arbitrary Natural where
-    arbitrary = fmap getNonNegative arbitrary
+    arbitrary = fmap (fromInteger . getNonNegative) arbitrary
     shrink =
         map (fromIntegral . getNonNegative) . shrink . NonNegative . toInteger
 
@@ -67,4 +67,28 @@ instance Arbitrary Permutation where
     shrink = map Permutation . shrink . ind
 
 main :: IO ()
-main = defaultMain (testGroup "Tests" [prop_allLexPerms, prop_permIsId])
+main =
+    defaultMain
+        (testGroup
+             "Tests"
+             [ prop_allLexPerms
+             , prop_permIsId
+             , testProperty
+                   "Inversion"
+                   (\n xs ->
+                         (permuteList n . permuteList (negate n)) xs ===
+                         (xs :: String))
+             , testProperty
+                   "Negation"
+                   (\n m xs ->
+                         (permuteList n . permuteList (negate m)) xs ===
+                         permuteList (n - m) (xs :: String))
+             , testProperty
+                   "Action"
+                   (\n m xs ->
+                         (permuteList n . permuteList m) xs ===
+                         permuteList (n + m) (xs :: String))
+             , testProperty
+                   "Zero"
+                   (\n ->
+                         (n - n) === (0 :: Permutation))])

@@ -3,6 +3,7 @@
 
 module Data.Permutations.Indexed
   (Permutation(..)
+  ,permuteList
   ,toFact
   ,fromFact
   ,factLen
@@ -87,7 +88,10 @@ instance Show Permutation where
     showsPrec n (Permutation x) = showsPrec n x
 
 instance Semigroup Permutation where
-    x <> y = fromIndices (permuteList x (indices y))
+    x <> y = fromIndices (permuteList y ([0..xl-yl-1] ++ map (max 0 (xl-yl)+) (indices x)))
+      where
+        xl = factLen y
+        yl = factLen x
 
 instance Monoid Permutation where
     mempty = Permutation 0
@@ -122,6 +126,7 @@ fromFact xs = Permutation (foldl f b xs 1)
 -- | Calculates the length of the factorial representation of a number.
 --
 -- prop> factLen n === length (toFact n)
+-- prop> factLen n === length (indices n)
 factLen :: Permutation -> Int
 factLen =
     length .
@@ -261,7 +266,7 @@ permuteOf trav n = runPermuted n . trav liftPermuted
 -- >>> import Test.QuickCheck
 -- >>> :{
 -- instance Arbitrary Natural where
---   arbitrary = fmap getNonNegative arbitrary
+--   arbitrary = fmap (fromInteger . getNonNegative) arbitrary
 --   shrink = map (fromIntegral . getNonNegative) . shrink . NonNegative . toInteger
 -- instance Arbitrary Permutation where
 --   arbitrary = fmap Permutation arbitrary

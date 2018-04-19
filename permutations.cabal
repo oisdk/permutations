@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f7e5e3c91aba50b04633831bee996801c290b4ee03257bbad119f1c554f8b9a5
+-- hash: 341c43327424769e809d193100cdfcb41dd061d36460bc9196b94d5881f4bdf6
 
 name:           permutations
 version:        0.1.0.0
@@ -43,8 +43,11 @@ library
       Data.Permutations.Indexed.Vector
       Data.Permutations.Indexed.Vector.Unboxed
   other-modules:
+      Data.Coerce.Operators
+      Data.List.Para
       Data.List.Uncons
       Data.List.Unfoldl
+      Data.Permutations.Factoriadic
       Data.Tree.Accumulations
       Paths_permutations
   default-language: Haskell2010

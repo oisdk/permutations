@@ -51,15 +51,15 @@ import           Data.Functor.Compose
 --
 -- Permutations can be composed, either with the monoid instance:
 --
--- >>> Permutation 2 <> Permutation 5
+-- !>> Permutation 2 <> Permutation 5
 -- 3
 --
 -- Or with '+':
 --
--- >>> Permutation 2 + Permutation 5
+-- !>> Permutation 2 + Permutation 5
 -- 3
 --
--- prop> (permuteList n . permuteList m) xs === permuteList (n <> m) xs
+-- !prop> (factLen n == factLen m ) ==> (permuteList n . permuteList m) xs === permuteList (n <> m) xs
 --
 -- Permutations can also be inverted:
 --
@@ -69,8 +69,8 @@ import           Data.Functor.Compose
 -- >>> permuteList (2 - 2) "abc"
 -- "abc"
 --
--- prop> (permuteList n . permuteList (negate n)) xs === xs
--- prop> permuteList (n - n) xs === xs
+-- !prop> (permuteList n . permuteList (negate n)) xs === xs
+-- !prop> permuteList (n - n) xs === xs
 --
 -- Permutations are cyclic for some input sizes. For instance, although
 -- @"abc"@ only has 6 unique permutations, if we run the 7th:
@@ -88,10 +88,12 @@ instance Show Permutation where
     showsPrec n (Permutation x) = showsPrec n x
 
 instance Semigroup Permutation where
-    x <> y = fromIndices (permuteList y ([0..xl-yl-1] ++ map (max 0 (xl-yl)+) (indices x)))
-      where
-        xl = factLen y
-        yl = factLen x
+    x <> y =
+        fromIndices
+            (permuteList
+                 x
+                 (permuteList y [0 .. max (factLen x) (factLen y) - 1]))
+
 
 instance Monoid Permutation where
     mempty = Permutation 0
@@ -180,7 +182,7 @@ indicesLength p' n =
     d = n - l
 
 -- |
--- prop> (permuteList (inv n) . permuteList n) xs === xs
+-- !prop> (permuteList (inv n) . permuteList n) xs === xs
 inv :: Permutation -> Permutation
 inv = fromIndices . map fst . sortBy (comparing snd) . zip [0 ..] . indices
 
@@ -197,8 +199,9 @@ permuteList n xs = evalState (permuteA (length xs) n uncons) xs
 -- on sequences of a specified length.
 wrapAround :: Int -> Permutation -> Permutation
 wrapAround ln p
-  | factLen p > ln = Permutation (ind p `mod` product [1.. toEnum ln])
+  | factLen p > ln = fromFact (drop (fl-ln) (toFact p))
   | otherwise = p
+  where fl = factLen p
 
 -- | Invertly permute
 --

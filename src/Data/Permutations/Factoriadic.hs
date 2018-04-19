@@ -87,13 +87,8 @@ instance Enum Factoriadic where
         go i n =
             case divMod i n of
                 (q,r) -> toEnum q : go (i + 1) r
-    fromEnum =
-        foldr
-            (\(b,e) a ->
-                  fromEnum e + b * a)
-            0 .
-        zip [1 ..] .#
-        runFactoriadic
+    fromEnum (Factoriadic xs) =
+        foldr (\e a b -> fromEnum e + b * a (b + 1)) (const 0) xs 1
     succ (Factoriadic xs') = Factoriadic (para go go' xs' 1) where
       go :: Natural -> [Natural] -> (Natural -> [Natural]) -> Natural -> [Natural]
       go x xs ys i
@@ -105,15 +100,11 @@ instance Enum Factoriadic where
     pred x = x - 1
 
 instance Integral Factoriadic where
-    toInteger =
-        foldr
-            (\(b,e) a ->
-                  toInteger e + b * a)
-            0 .
-        zip [1 ..] .#
-        runFactoriadic
-    quotRem n m = case quotRem (toInteger n) (toInteger m) of
-      (q,r) -> (fromInteger q, fromInteger r)
+    toInteger (Factoriadic xs) =
+        foldr (\e a b -> toInteger e + b * a (b + 1)) (const 0) xs 1
+    quotRem n m =
+        case quotRem (toInteger n) (toInteger m) of
+            (q,r) -> (fromInteger q, fromInteger r)
 
 instance Show Factoriadic where
     showsPrec n = showsPrec n . toInteger

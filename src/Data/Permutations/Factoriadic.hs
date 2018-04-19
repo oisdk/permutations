@@ -1,8 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Data.Permutations.Factoriadic where
 
 import           Data.Coerce
 import           Data.Coerce.Operators
-import           Data.List
 import           Data.List.Para
 import           Numeric.Natural
 import           Data.Semigroup
@@ -12,14 +13,17 @@ newtype Factoriadic = Factoriadic
     { runFactoriadic :: [Natural]
     } deriving Eq
 
+
+-- |
+-- prop> compare x y === compare (toInteger x) (toInteger (y :: Factoriadic))
 instance Ord Factoriadic where
-    compare = coerce go
+    compare = coerce (go EQ)
       where
-        go :: [Natural] -> [Natural] -> Ordering
-        go [] [] = EQ
-        go (_:_) [] = GT
-        go [] (_:_) = LT
-        go (x:xs) (y:ys) = go xs ys <> compare x y
+        go :: Ordering -> [Natural] -> [Natural] -> Ordering
+        go !a [] [] = a
+        go !_ (_:_) [] = GT
+        go !_ [] (_:_) = LT
+        go !a (x:xs) (y:ys) = go (compare x y <> a) xs ys
 
 -- |
 --
@@ -50,12 +54,12 @@ instance Num Factoriadic where
     {-# INLINE (+) #-}
     xs * ys = fromInteger (toInteger xs * toInteger ys)
     abs = id
-    fromInteger = Factoriadic #. unfoldr (uncurry f) . (,) 1
+    fromInteger = Factoriadic #. go 1
       where
-        f _ 0 = Nothing
-        f i n =
+        go _ 0 = []
+        go i n =
             case divMod n i of
-                (q,r) -> Just (fromInteger r, (i + 1, q))
+                (q,r) -> fromInteger r : go (i + 1) q
     signum (Factoriadic []) = Factoriadic []
     signum _ = Factoriadic [0, 1]
     (-) = coerce (go 0 1)
@@ -85,8 +89,8 @@ instance Enum Factoriadic where
       where
         go _ 0 = []
         go i n =
-            case divMod i n of
-                (q,r) -> toEnum q : go (i + 1) r
+            case divMod n i of
+                (q,r) -> toEnum r : go (i + 1) q
     fromEnum (Factoriadic xs) =
         foldr (\e a b -> fromEnum e + b * a (b + 1)) (const 0) xs 1
     succ (Factoriadic xs') = Factoriadic (para go go' xs' 1) where

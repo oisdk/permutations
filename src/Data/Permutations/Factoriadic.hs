@@ -31,26 +31,30 @@ instance Ord Factoriadic where
 -- prop> \ (NonNegative n) (NonNegative m) -> m <= n ==> toInteger (fromInteger n - (fromInteger m :: Factoriadic)) === fromInteger (n - m)
 -- prop> \ (NonNegative n) (NonNegative m) -> toInteger (fromInteger n * (fromInteger m :: Factoriadic)) === fromInteger (n * m)
 instance Num Factoriadic where
-    (+) = coerce (go False 1)
+    (+) = coerce (go 1)
       where
-        go :: Bool -> Natural -> [Natural] -> [Natural] -> [Natural]
-        go c i (x:xs) (y:ys)
-          | m >= i = (m - i) : go True (i + 1) xs ys
-          | otherwise = m : go False (i + 1) xs ys
+        go :: Natural -> [Natural] -> [Natural] -> [Natural]
+        go i (x:xs) (y:ys)
+          | m >= i = (m - i) : goc (i + 1) xs ys
+          | otherwise = m : go (i + 1) xs ys
           where
-            m
-              | c = succ (x + y)
-              | otherwise = x + y
-        go c i xs [] = para go' go'' xs c i
-        go c i [] ys = para go' go'' ys c i
-        go' x xs _ False _ = x : xs
-        go' x _ a True i
-          | m >= i = (m - i) : a True (i + 1)
-          | otherwise = m : a False (i + 1)
-          where m = succ x
-        go'' False _ = []
-        go'' True  1 = [0,1]
-        go'' True  _ = [1]
+            m = x + y
+        go _ xs [] = xs
+        go _ [] ys = ys
+        goc i (x:xs) (y:ys)
+          | m >= i = (m - i) : goc (i + 1) xs ys
+          | otherwise = m : go (i + 1) xs ys
+          where
+            m = succ (x + y)
+        goc i xs [] = para go' go'' xs i
+        goc i [] ys = para go' go'' ys i
+        go' x xs a i
+          | m >= i = (m - i) : a (i + 1)
+          | otherwise = m : xs
+          where
+            m = succ x
+        go'' 1 = [0, 1]
+        go'' _ = [1]
     {-# INLINE (+) #-}
     xs * ys = fromInteger (toInteger xs * toInteger ys)
     abs = id

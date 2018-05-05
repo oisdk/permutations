@@ -8,11 +8,13 @@ import           Data.List.Para
 import           Numeric.Natural
 import           Data.Semigroup
 
+import qualified Numeric.Baseless as Baseless
+
+
 -- | The Factoriadic representation of a number.
 newtype Factoriadic = Factoriadic
     { runFactoriadic :: [Natural]
     } deriving Eq
-
 
 -- |
 -- prop> compare x y === compare (toInteger x) (toInteger (y :: Factoriadic))
@@ -31,30 +33,7 @@ instance Ord Factoriadic where
 -- prop> \ (NonNegative n) (NonNegative m) -> m <= n ==> toInteger (fromInteger n - (fromInteger m :: Factoriadic)) === fromInteger (n - m)
 -- prop> \ (NonNegative n) (NonNegative m) -> toInteger (fromInteger n * (fromInteger m :: Factoriadic)) === fromInteger (n * m)
 instance Num Factoriadic where
-    (+) = coerce (go 1)
-      where
-        go :: Natural -> [Natural] -> [Natural] -> [Natural]
-        go i (x:xs) (y:ys)
-          | m >= i = (m - i) : goc (i + 1) xs ys
-          | otherwise = m : go (i + 1) xs ys
-          where
-            m = x + y
-        go _ xs [] = xs
-        go _ [] ys = ys
-        goc i (x:xs) (y:ys)
-          | m >= i = (m - i) : goc (i + 1) xs ys
-          | otherwise = m : go (i + 1) xs ys
-          where
-            m = succ (x + y)
-        goc i xs [] = para go' go'' xs i
-        goc i [] ys = para go' go'' ys i
-        go' x xs a i
-          | m >= i = (m - i) : a (i + 1)
-          | otherwise = m : xs
-          where
-            m = succ x
-        go'' 1 = [0, 1]
-        go'' _ = [1]
+    (+) = coerce (Baseless.add Baseless.numDict succ 1 :: [Natural] -> [Natural] -> [Natural])
     {-# INLINE (+) #-}
     xs * ys = fromInteger (toInteger xs * toInteger ys)
     abs = id
@@ -66,22 +45,7 @@ instance Num Factoriadic where
                 (q,r) -> fromInteger r : go (i + 1) q
     signum (Factoriadic []) = Factoriadic []
     signum _ = Factoriadic [0, 1]
-    (-) = coerce (go 0 1)
-      where
-        go :: Integer -> Integer -> [Natural] -> [Natural] -> [Natural]
-        go c i (x:xs) (y:ys) =
-            case divMod (toInteger x + c - toInteger y) i of
-                (q,r) -> fromInteger r : go q (i + 1) xs ys
-        go c i xs [] = para go' go'' xs c i
-        go c i [] ys = para go' go'' ys c i
-        go' x xs _ 0 _ = x : xs
-        go' x _ xs c i =
-            case divMod (toInteger x + c) i of
-                (q,r) -> fromInteger r : xs q (i + 1)
-        go'' 0 _ = []
-        go'' c i =
-            case divMod c i of
-                (q,r) -> fromInteger r : go'' q (i + 1)
+    (-) = coerce (Baseless.diff Baseless.numDict succ 1 :: [Natural] -> [Natural] -> [Natural])
 
 instance Real Factoriadic where
     toRational = toRational . toInteger
